@@ -7,10 +7,11 @@ import math
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-
 from backend.gemini_service import explain_greenroi_result
+
 
 # --------------------------------------------------
 # 1. Configuration and paths
@@ -92,8 +93,14 @@ except Exception as exc:
 
 
 logger.info("GreenROI ML model loaded successfully.")
-logger.info("Intervention records loaded: %s", len(interventions_df))
-logger.info("Evidence records loaded: %s", len(evidence_df))
+logger.info(
+    "Intervention records loaded: %s",
+    len(interventions_df),
+)
+logger.info(
+    "Evidence records loaded: %s",
+    len(evidence_df),
+)
 
 
 # --------------------------------------------------
@@ -107,6 +114,22 @@ app = FastAPI(
         "decision-support API with Gemini-generated reports."
     ),
     version="0.3.0",
+)
+
+
+# --------------------------------------------------
+# 3A. CORS configuration for Firebase
+# --------------------------------------------------
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://greenroi-e76f6.web.app",
+        "https://greenroi-e76f6.firebaseapp.com",
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -127,7 +150,8 @@ class MachineInput(BaseModel):
 
     # Cost and ROI values supplied by the frontend
     costing_data: dict = Field(default_factory=dict)
-    
+
+
 # --------------------------------------------------
 # 5. Helper functions
 # --------------------------------------------------
@@ -225,7 +249,10 @@ def knowledge_base():
 @app.post("/predict")
 def predict(machine: MachineInput):
     # Step 1: Convert validated inputs to a dictionary.
-    machine_data = machine.model_dump()
+    machine_data = machine.model_dump(
+        exclude={"costing_data"}
+    )
+    costing_data = machine.costing_data
 
     # Step 2: Run the ML prediction.
     try:
