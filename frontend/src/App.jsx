@@ -21,6 +21,12 @@ import {
   Zap,
 } from 'lucide-react'
 
+// Production: set VITE_API_BASE_URL in frontend/.env.production.
+// Local development falls back to the FastAPI server on port 8000.
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+).replace(/\/$/, '')
+
 const initialForm = {
   machine_type: 'CNC',
   machine_age_years: 7,
@@ -162,8 +168,8 @@ function App() {
 
     try {
       const [healthRes, kbRes] = await Promise.all([
-        fetch('/api/health'),
-        fetch('/api/knowledge-base'),
+        fetch(`${API_BASE_URL}/health`),
+        fetch(`${API_BASE_URL}/knowledge-base`),
       ])
 
       if (!healthRes.ok || !kbRes.ok) {
@@ -177,7 +183,7 @@ function App() {
       setHealth(null)
       setKb(null)
       setError(
-        `Cannot connect to GreenROI. Start FastAPI on port 8000. ${err.message}`
+        `Cannot connect to the GreenROI backend. Check the Render service and API URL. ${err.message}`
       )
     } finally {
       setChecking(false)
@@ -227,7 +233,7 @@ function App() {
         costing_data: costingData,
       }
 
-      const response = await fetch('/api/predict', {
+      const response = await fetch(`${API_BASE_URL}/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -731,7 +737,7 @@ function App() {
               <div className="system-item-icon"><Cpu size={18} /></div>
               <div className="system-item-copy">
                 <strong>FastAPI backend</strong>
-                <span>Local API · port 8000</span>
+                <span>FastAPI · deployed service</span>
               </div>
               <span className={`system-state ${health ? 'ok' : 'bad'}`}>
                 {health ? 'Connected' : 'Offline'}
